@@ -19,7 +19,7 @@ jobs:
       - name: Prepare web files
         run: |
           mkdir www
-          cp hoon-voca.html www/index.html
+          cp "$(ls *.html | head -n 1)" www/index.html
       - run: npm init -y
       - run: npm install @capacitor/core @capacitor/cli @capacitor/android
       - run: npx cap init "훈이는단어왕" com.example.hoonvoca --web-dir www
