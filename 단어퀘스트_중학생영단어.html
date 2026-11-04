@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>단어퀘스트 - 중학 영단어 자동 암기 플레이어</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+      background-color: #020617;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      user-select: none;
+    }
+    .container {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #1e293b;
+      border-radius: 18px;
+    }
+    .title {
+      font-weight: 900;
+      font-size: 16px;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .counter {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .card {
+      background: linear-gradient(180deg, #0f172a 0%, #090d16 100%);
+      border: 2px solid #1e293b;
+      border-radius: 28px;
+      padding: 40px 24px;
+      text-align: center;
+      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+    }
+    .badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .word {
+      font-size: 44px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .phonetic {
+      font-size: 15px;
+      color: #64748b;
+      font-family: ui-monospace, monospace;
+    }
+    .meaning {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fde047;
+      text-shadow: 0 2px 10px rgba(250, 204, 21, 0.2);
+    }
+    .example-box {
+      margin-top: 10px;
+      padding: 14px;
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: left;
+    }
+    .example-en { color: #cbd5e1; font-weight: 500; margin-bottom: 4px; }
+    .example-ko { color: #64748b; }
+    .speed-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #1e293b;
+      padding: 8px;
+      border-radius: 16px;
+    }
+    .speed-label { font-size: 12px; font-weight: 700; color: #94a3b8; margin-right: 4px; }
+    .speed-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .speed-btn.active {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #6366f1;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+    .nav-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1fr;
+      gap: 10px;
+    }
+    .nav-btn {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .nav-btn:active { transform: scale(0.97); }
+    .play-btn {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+    }
+    .play-btn.paused {
+      background: #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">⚔️ 단어퀘스트 일반 암기</div>
+      <div class="counter" id="counter">단어 1 / 50</div>
+    </div>
+
+    <div class="card">
+      <div class="badge-row">
+        <span class="badge" id="gradeBadge">중1 필수</span>
+        <span class="badge" id="categoryBadge">학교/일상</span>
+      </div>
+
+      <div>
+        <div class="word" id="wordText">adventure</div>
+        <div class="phonetic" id="phoneticText">/ədˈventʃər/</div>
+      </div>
+
+      <!-- 단어와 뜻이 한번에 직관적으로 표시됨 -->
+      <div class="meaning" id="meaningText">모험, 모험심</div>
+
+      <div class="example-box">
+        <div class="example-en" id="exampleEn">They went on an exciting adventure in the forest.</div>
+        <div class="example-ko" id="exampleKo">그들은 숲속으로 신나는 모험을 떠났다.</div>
+      </div>
+    </div>
+
+    <!-- 1초 / 2초 / 3초 속도 선택 바 -->
+    <div class="speed-bar">
+      <span class="speed-label">⏱️ 자동 넘김 속도:</span>
+      <button class="speed-btn" onclick="setSpeed(1000)" id="spd1">1초</button>
+      <button class="speed-btn active" onclick="setSpeed(2000)" id="spd2">2초</button>
+      <button class="speed-btn" onclick="setSpeed(3000)" id="spd3">3초</button>
+    </div>
+
+    <!-- 이전 / 재생 / 다음 컨트롤 -->
+    <div class="nav-grid">
+      <button class="nav-btn" onclick="prevWord()">◀ 이전</button>
+      <button class="nav-btn play-btn" onclick="togglePlay()" id="playBtn">⏸ 일시정지</button>
+      <button class="nav-btn" onclick="nextWord()">다음 ▶</button>
+    </div>
+  </div>
+
+  <script>
+    const WORDS = [
+  {
+    "id": "w-g1-01",
+    "word": "adventure",
+    "phonetic": "/ədˈventʃər/",
+    "meaning": "모험, 모험심",
+    "partOfSpeech": "n",
+    "grade": 1,
+    "category": "모험/액션",
+    "exampleEn": "They went on an exciting adventure in the forest.",
+    "exampleKo": "그들은 숲속으로 신나는 모험을 떠났다.",
+    "hint": "위험을 무릅쓰고 떠나는 여행이나 경험"
+  },
+  {
+    "id": "w-g1-02",
+    "word": "ancient",
+    "phonetic": "/ˈeɪnʃənt/",
+    "meaning": "고대의, 아주 오래된",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "역사/문화",
+    "exampleEn": "We visited the ancient temple in Greece.",
+    "exampleKo": "우리는 그리스에 있는 고대 사원을 방문했다.",
+    "hint": "modern(현대의)의 반대말"
+  },
+  {
+    "id": "w-g1-03",
+    "word": "borrow",
+    "phonetic": "/ˈbɑːroʊ/",
+    "meaning": "빌리다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "Can I borrow your pencil for a moment?",
+    "exampleKo": "연필 좀 잠시 빌려도 될까?",
+    "hint": "lend(빌려주다)의 반대말"
+  },
+  {
+    "id": "w-g1-04",
+    "word": "brave",
+    "phonetic": "/breɪv/",
+    "meaning": "용감한, 씩씩한",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "성격/감정",
+    "exampleEn": "The brave knight protected the village.",
+    "exampleKo": "그 용감한 기사는 마을을 지켰다.",
+    "hint": "두려움 없이 맞서는 태도"
+  },
+  {
+    "id": "w-g1-05",
+    "word": "curious",
+    "phonetic": "/ˈkjʊriəs/",
+    "meaning": "호기심이 많은, 궁금한",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "성격/감정",
+    "exampleEn": "Cats are naturally curious animals.",
+    "exampleKo": "고양이는 천성적으로 호기심이 많은 동물이다.",
+    "hint": "새로운 것을 알고 싶어 하는 마음"
+  },
+  {
+    "id": "w-g1-06",
+    "word": "discover",
+    "phonetic": "/dɪˈskʌvər/",
+    "meaning": "발견하다, 알아내다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "과학/탐구",
+    "exampleEn": "Scientists discovered a new planet.",
+    "exampleKo": "과학자들이 새로운 행성을 발견했다.",
+    "hint": "숨겨진 것이나 새로운 사실을 찾아냄"
+  },
+  {
+    "id": "w-g1-07",
+    "word": "honest",
+    "phonetic": "/ˈɑːnɪst/",
+    "meaning": "정직한, 솔직한",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "성격/감정",
+    "exampleEn": "He is an honest boy who never tells lies.",
+    "exampleKo": "그는 절대 거짓말을 하지 않는 정직한 소년이다.",
+    "hint": "h 발음이 묵음임"
+  },
+  {
+    "id": "w-g1-08",
+    "word": "patient",
+    "phonetic": "/ˈpeɪʃnt/",
+    "meaning": "참을성 있는, 환자",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "성격/감정",
+    "exampleEn": "You need to be patient while waiting in line.",
+    "exampleKo": "줄을 서서 기다릴 때는 인내심을 가져야 한다.",
+    "hint": "형용사로는 인내하는, 명사로는 아픈 사람"
+  },
+  {
+    "id": "w-g1-09",
+    "word": "polite",
+    "phonetic": "/pəˈlaɪt/",
+    "meaning": "공손한, 예의 바른",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "It is important to use polite words to elders.",
+    "exampleKo": "어른들께 공손한 말을 사용하는 것이 중요하다.",
+    "hint": "rude(무례한)의 반대말"
+  },
+  {
+    "id": "w-g1-10",
+    "word": "protect",
+    "phonetic": "/prəˈtekt/",
+    "meaning": "보호하다, 지키다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "사회/자연",
+    "exampleEn": "We must protect wild animals and nature.",
+    "exampleKo": "우리는 야생 동물과 자연을 보호해야 한다.",
+    "hint": "위험이나 해로부터 안전하게 함"
+  },
+  {
+    "id": "w-g1-11",
+    "word": "regular",
+    "phonetic": "/ˈreɡjələr/",
+    "meaning": "규칙적인, 보통의",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "건강/일상",
+    "exampleEn": "Regular exercise is good for your health.",
+    "exampleKo": "규칙적인 운동은 건강에 좋다.",
+    "hint": "일정한 간격이나 규칙에 따르는"
+  },
+  {
+    "id": "w-g1-12",
+    "word": "treasure",
+    "phonetic": "/ˈtreʒər/",
+    "meaning": "보물, 귀중히 여기다",
+    "partOfSpeech": "n",
+    "grade": 1,
+    "category": "모험/액션",
+    "exampleEn": "Pirates searched for hidden treasure on the island.",
+    "exampleKo": "해적들은 섬에서 숨겨진 보물을 찾았다.",
+    "hint": "보물 상자에 들어있는 값진 물건"
+  },
+  {
+    "id": "w-g1-13",
+    "word": "invent",
+    "phonetic": "/ɪnˈvent/",
+    "meaning": "발명하다, 꾸며내다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "과학/탐구",
+    "exampleEn": "Who invented the telephone?",
+    "exampleKo": "전화기는 누가 발명했나요?",
+    "hint": "세상에 없던 물건을 새롭게 만듦"
+  },
+  {
+    "id": "w-g1-14",
+    "word": "neighbor",
+    "phonetic": "/ˈneɪbər/",
+    "meaning": "이웃, 이웃 사람",
+    "partOfSpeech": "n",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "Our neighbors are always kind and friendly.",
+    "exampleKo": "우리 이웃들은 항상 친절하고 다정하다.",
+    "hint": "가까이 사는 사람들"
+  },
+  {
+    "id": "w-g1-15",
+    "word": "valuable",
+    "phonetic": "/ˈvæljuəbl/",
+    "meaning": "가치 있는, 귀중한",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "Time is the most valuable thing in life.",
+    "exampleKo": "시간은 인생에서 가장 귀중한 것이다.",
+    "hint": "value(가치) + able(가능한)"
+  },
+  {
+    "id": "w-g1-16",
+    "word": "danger",
+    "phonetic": "/ˈdeɪndʒər/",
+    "meaning": "위험, 위험한 곳",
+    "partOfSpeech": "n",
+    "grade": 1,
+    "category": "모험/액션",
+    "exampleEn": "The sign warned us of falling rocks danger.",
+    "exampleKo": "그 표지판은 낙석 위험을 경고했다.",
+    "hint": "safe(안전한)의 반대 개념"
+  },
+  {
+    "id": "w-g1-17",
+    "word": "celebrate",
+    "phonetic": "/ˈselɪbreɪt/",
+    "meaning": "축하하다, 기념하다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "We celebrated Mina’s birthday with a party.",
+    "exampleKo": "우리는 파티로 미나의 생일을 축하했다.",
+    "hint": "기쁜 날을 함께 즐김"
+  },
+  {
+    "id": "w-g1-18",
+    "word": "delicious",
+    "phonetic": "/dɪˈlɪʃəs/",
+    "meaning": "맛있는, 아주 향기로운",
+    "partOfSpeech": "adj",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "Mom made delicious chocolate cookies.",
+    "exampleKo": "엄마께서 맛있는 초콜릿 쿠키를 구워 주셨다.",
+    "hint": "yummy와 같은 뜻"
+  },
+  {
+    "id": "w-g1-19",
+    "word": "exercise",
+    "phonetic": "/ˈeksərsaɪz/",
+    "meaning": "운동하다, 연습하다",
+    "partOfSpeech": "v",
+    "grade": 1,
+    "category": "건강/일상",
+    "exampleEn": "I exercise for thirty minutes every morning.",
+    "exampleKo": "나는 매일 아침 30분씩 운동한다.",
+    "hint": "몸을 단련하는 신체 활동"
+  },
+  {
+    "id": "w-g1-20",
+    "word": "memory",
+    "phonetic": "/ˈmeməri/",
+    "meaning": "기억, 추억",
+    "partOfSpeech": "n",
+    "grade": 1,
+    "category": "학교/일상",
+    "exampleEn": "School field trips create wonderful memories.",
+    "exampleKo": "수학여행은 멋진 추억을 만든다.",
+    "hint": "기억력이나 머릿속에 남은 추억"
+  },
+  {
+    "id": "w-g2-01",
+    "word": "achieve",
+    "phonetic": "/əˈtʃiːv/",
+    "meaning": "성취하다, 이루다",
+    "partOfSpeech": "v",
+    "grade": 2,
+    "category": "학습/목표",
+    "exampleEn": "You can achieve your goals with hard work.",
+    "exampleKo": "열심히 노력하면 목표를 성취할 수 있다.",
+    "hint": "목표나 꿈을 달성함"
+  },
+  {
+    "id": "w-g2-02",
+    "word": "challenge",
+    "phonetic": "/ˈtʃælɪndʒ/",
+    "meaning": "도전, 도전하다",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "학습/목표",
+    "exampleEn": "Climbing that mountain was a tough challenge.",
+    "exampleKo": "그 산을 오르는 것은 힘든 도전이었다.",
+    "hint": "어려움을 극복하려는 시도"
+  },
+  {
+    "id": "w-g2-03",
+    "word": "concentrate",
+    "phonetic": "/ˈkɑːnsntreɪt/",
+    "meaning": "집중하다, 모으다",
+    "partOfSpeech": "v",
+    "grade": 2,
+    "category": "학습/목표",
+    "exampleEn": "Please be quiet so I can concentrate on reading.",
+    "exampleKo": "독서에 집중할 수 있도록 조용히 해 줘.",
+    "hint": "focus와 동의어"
+  },
+  {
+    "id": "w-g2-04",
+    "word": "environment",
+    "phonetic": "/ɪnˈvaɪrənmənt/",
+    "meaning": "환경, 자연환경",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "사회/자연",
+    "exampleEn": "We should recycle plastic to save the environment.",
+    "exampleKo": "환경을 보호하기 위해 플라스틱을 재활용해야 한다.",
+    "hint": "우리를 둘러싸고 있는 자연 생태계"
+  },
+  {
+    "id": "w-g2-05",
+    "word": "generous",
+    "phonetic": "/ˈdʒenərəs/",
+    "meaning": "관대한, 후한, 너그러운",
+    "partOfSpeech": "adj",
+    "grade": 2,
+    "category": "성격/감정",
+    "exampleEn": "She was generous enough to share her lunch.",
+    "exampleKo": "그녀는 점심을 나누어 줄 만큼 너그러웠다.",
+    "hint": "남에게 잘 베풀고 인심이 좋은"
+  },
+  {
+    "id": "w-g2-06",
+    "word": "immediate",
+    "phonetic": "/ɪˈmiːdiət/",
+    "meaning": "즉시의, 즉각적인",
+    "partOfSpeech": "adj",
+    "grade": 2,
+    "category": "사회/과학",
+    "exampleEn": "The doctor provided immediate aid to the injured boy.",
+    "exampleKo": "의사는 다친 소년에게 즉각적인 처치를 제공했다.",
+    "hint": "지체 없이 바로 일어나는"
+  },
+  {
+    "id": "w-g2-07",
+    "word": "opportunity",
+    "phonetic": "/ˌɑːpərˈtuːnəti/",
+    "meaning": "기회, 가망",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "학습/목표",
+    "exampleEn": "Studying abroad is a great opportunity to learn.",
+    "exampleKo": "해외 유학은 배움의 훌륭한 기회이다.",
+    "hint": "chance와 같은 의미"
+  },
+  {
+    "id": "w-g2-08",
+    "word": "pollution",
+    "phonetic": "/pəˈluːʃn/",
+    "meaning": "오염, 공해",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "사회/자연",
+    "exampleEn": "Air pollution is causing health problems in big cities.",
+    "exampleKo": "대기 오염은 대도시에서 건강 문제를 일으키고 있다.",
+    "hint": "pollute(오염시키다)의 명사형"
+  },
+  {
+    "id": "w-g2-09",
+    "word": "reduce",
+    "phonetic": "/rɪˈduːs/",
+    "meaning": "줄이다, 낮추다",
+    "partOfSpeech": "v",
+    "grade": 2,
+    "category": "사회/자연",
+    "exampleEn": "We must reduce energy waste at home.",
+    "exampleKo": "우리는 집에서 에너지 낭비를 줄여야 한다.",
+    "hint": "increase(늘리다)의 반대말"
+  },
+  {
+    "id": "w-g2-10",
+    "word": "tradition",
+    "phonetic": "/trəˈdɪʃn/",
+    "meaning": "전통, 관습",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "역사/문화",
+    "exampleEn": "Making songpyeon on Chuseok is a Korean tradition.",
+    "exampleKo": "추석에 송편을 만드는 것은 한국의 전통이다.",
+    "hint": "오랜 시간 대대로 내려오는 문화나 관습"
+  },
+  {
+    "id": "w-g2-11",
+    "word": "community",
+    "phonetic": "/kəˈmjuːnəti/",
+    "meaning": "공동체, 지역사회",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "사회/자연",
+    "exampleEn": "Volunteering helps our local community.",
+    "exampleKo": "자원봉사는 우리 지역사회를 돕는다.",
+    "hint": "함께 살아가는 사회 집단"
+  },
+  {
+    "id": "w-g2-12",
+    "word": "confident",
+    "phonetic": "/ˈkɑːnfɪdənt/",
+    "meaning": "자신감 있는, 확신하는",
+    "partOfSpeech": "adj",
+    "grade": 2,
+    "category": "성격/감정",
+    "exampleEn": "She felt confident before the English speech.",
+    "exampleKo": "그녀는 영어 말하기 대회 전에 자신감이 넘쳤다.",
+    "hint": "스스로를 믿는 씩씩한 태도"
+  },
+  {
+    "id": "w-g2-13",
+    "word": "express",
+    "phonetic": "/ɪkˈspres/",
+    "meaning": "표현하다, 나타내다",
+    "partOfSpeech": "v",
+    "grade": 2,
+    "category": "소통/예술",
+    "exampleEn": "Art is a great way to express your feelings.",
+    "exampleKo": "미술은 자신의 감정을 표현하는 훌륭한 방법이다.",
+    "hint": "말이나 그림으로 마음을 드러냄"
+  },
+  {
+    "id": "w-g2-14",
+    "word": "ordinary",
+    "phonetic": "/ˈɔːrdneri/",
+    "meaning": "평범한, 보통의",
+    "partOfSpeech": "adj",
+    "grade": 2,
+    "category": "학교/일상",
+    "exampleEn": "It was just an ordinary school day.",
+    "exampleKo": "그날은 단지 평범한 등교일이었다.",
+    "hint": "extraordinary(비범한)의 반대말"
+  },
+  {
+    "id": "w-g2-15",
+    "word": "purpose",
+    "phonetic": "/ˈpɜːrpəs/",
+    "meaning": "목적, 의도",
+    "partOfSpeech": "n",
+    "grade": 2,
+    "category": "학습/목표",
+    "exampleEn": "What is the main purpose of this science experiment?",
+    "exampleKo": "이 과학 실험의 주된 목적은 무엇인가요?",
+    "hint": "행동을 하는 까닭이나 목표"
+  },
+  {
+    "id": "w-g3-01",
+    "word": "accomplish",
+    "phonetic": "/əˈkɑːmplɪʃ/",
+    "meaning": "성취하다, 완수하다",
+    "partOfSpeech": "v",
+    "grade": 3,
+    "category": "학습/목표",
+    "exampleEn": "They accomplished the mission before sunset.",
+    "exampleKo": "그들은 해가 지기 전에 임무를 완수했다.",
+    "hint": "어려운 일을 끝까지 해내다"
+  },
+  {
+    "id": "w-g3-02",
+    "word": "consequence",
+    "phonetic": "/ˈkɑːnsəkwens/",
+    "meaning": "결과, 영향",
+    "partOfSpeech": "n",
+    "grade": 3,
+    "category": "사회/과학",
+    "exampleEn": "Every choice brings its own consequences.",
+    "exampleKo": "모든 선택에는 그에 따른 결과가 따른다.",
+    "hint": "어떤 행동의 뒤따르는 결과"
+  },
+  {
+    "id": "w-g3-03",
+    "word": "independent",
+    "phonetic": "/ˌɪndɪˈpendənt/",
+    "meaning": "독립된, 자립적인",
+    "partOfSpeech": "adj",
+    "grade": 3,
+    "category": "성격/사회",
+    "exampleEn": "Teenagers strive to become independent thinkers.",
+    "exampleKo": "십 대들은 주체적이고 독립적인 생각가가 되려 노력한다.",
+    "hint": "depend(의존하다)의 반대 어원"
+  },
+  {
+    "id": "w-g3-04",
+    "word": "magnificent",
+    "phonetic": "/mæɡˈnɪfɪsnt/",
+    "meaning": "웅장한, 대단히 훌륭한",
+    "partOfSpeech": "adj",
+    "grade": 3,
+    "category": "자연/예술",
+    "exampleEn": "The sunrise from the mountaintop was magnificent.",
+    "exampleKo": "산 정상에서 바라본 일출은 웅장했다.",
+    "hint": "크고 감탄이 절로 나올 만큼 멋짐"
+  },
+  {
+    "id": "w-g3-05",
+    "word": "obstacle",
+    "phonetic": "/ˈɑːbstəkl/",
+    "meaning": "장애물, 방해물",
+    "partOfSpeech": "n",
+    "grade": 3,
+    "category": "모험/목표",
+    "exampleEn": "Fear is often the biggest obstacle to success.",
+    "exampleKo": "두려움은 종종 성공의 가장 큰 장애물이다.",
+    "hint": "길을 가로막는 걸림돌"
+  },
+  {
+    "id": "w-g3-06",
+    "word": "significant",
+    "phonetic": "/sɪɡˈnɪfɪkənt/",
+    "meaning": "중요한, 상당한",
+    "partOfSpeech": "adj",
+    "grade": 3,
+    "category": "사회/과학",
+    "exampleEn": "There has been a significant change in the test score.",
+    "exampleKo": "시험 점수에 상당한 변화가 있었다.",
+    "hint": "meaningful, important의 고급 어휘"
+  },
+  {
+    "id": "w-g3-07",
+    "word": "vulnerable",
+    "phonetic": "/ˈvʌlnərəbl/",
+    "meaning": "취약한, 상처받기 쉬운",
+    "partOfSpeech": "adj",
+    "grade": 3,
+    "category": "성격/사회",
+    "exampleEn": "Baby turtles are vulnerable to birds on the beach.",
+    "exampleKo": "새끼 거북들은 해변에서 새들의 공격에 취약하다.",
+    "hint": "공격이나 상처를 쉽게 받음"
+  },
+  {
+    "id": "w-g3-08",
+    "word": "persuade",
+    "phonetic": "/pərˈsweɪd/",
+    "meaning": "설득하다, 납득시키다",
+    "partOfSpeech": "v",
+    "grade": 3,
+    "category": "소통/사회",
+    "exampleEn": "I persuaded my parents to adopt a stray cat.",
+    "exampleKo": "나는 부모님을 설득하여 유기묘를 입양했다.",
+    "hint": "말이나 논리로 상대방의 마음을 움직임"
+  },
+  {
+    "id": "w-g3-09",
+    "word": "enthusiastic",
+    "phonetic": "/ɪnˌθuːziˈæstɪk/",
+    "meaning": "열광적인, 열정적인",
+    "partOfSpeech": "adj",
+    "grade": 3,
+    "category": "성격/감정",
+    "exampleEn": "The students were enthusiastic about the science fair.",
+    "exampleKo": "학생들은 과학 박람회에 매우 열정적이었다.",
+    "hint": "매우 열의가 넘치는 상태"
+  },
+  {
+    "id": "w-g3-10",
+    "word": "contribute",
+    "phonetic": "/kənˈtrɪbjuːt/",
+    "meaning": "기여하다, 공헌하다",
+    "partOfSpeech": "v",
+    "grade": 3,
+    "category": "사회/윤리",
+    "exampleEn": "Everyone can contribute to keeping our school clean.",
+    "exampleKo": "모두가 학교를 깨끗이 유지하는 데 기여할 수 있다.",
+    "hint": "도움이나 이바지를 함"
+  },
+  {
+    "id": "w-g3-11",
+    "word": "substitute",
+    "phonetic": "/ˈsʌbstɪtuːt/",
+    "meaning": "대체하다, 대신하다",
+    "partOfSpeech": "v",
+    "grade": 3,
+    "category": "학습/일상",
+    "exampleEn": "You can substitute honey for white sugar.",
+    "exampleKo": "백설탕 대신 꿀을 대체해서 사용할 수 있다.",
+    "hint": "다른 것으로 바꾸어 씀"
+  },
+  {
+    "id": "w-g3-12",
+    "word": "investigate",
+    "phonetic": "/ɪnˈvestɪɡeɪt/",
+    "meaning": "수사하다, 면밀히 조사하다",
+    "partOfSpeech": "v",
+    "grade": 3,
+    "category": "과학/탐구",
+    "exampleEn": "Detectives investigated the mysterious case.",
+    "exampleKo": "수사관들이 그 의문의 사건을 면밀히 조사했다.",
+    "hint": "진실을 밝히기 위해 캐묻고 연구함"
+  },
+  {
+    "id": "w-id-01",
+    "word": "look forward to",
+    "phonetic": "/lʊk ˈfɔːrwərd tuː/",
+    "meaning": "~을 학수고대하다, 손꼽아 기다리다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "I look forward to meeting you at summer camp.",
+    "exampleKo": "여름 캠프에서 너를 만나기를 정말 고대하고 있어.",
+    "hint": "to 뒤에 명사나 동명사(-ing)가 옴"
+  },
+  {
+    "id": "w-id-02",
+    "word": "give up",
+    "phonetic": "/ɡɪv ʌp/",
+    "meaning": "포기하다, 굴복하다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "Never give up on your dreams!",
+    "exampleKo": "너의 꿈을 절대 포기하지 마!",
+    "hint": "끝까지 시도하지 않고 단념함"
+  },
+  {
+    "id": "w-id-03",
+    "word": "take care of",
+    "phonetic": "/teɪk ker əv/",
+    "meaning": "~을 돌보다, 보살피다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "Please take care of my puppy while I am away.",
+    "exampleKo": "내가 없는 동안 내 강아지를 잘 돌봐 줘.",
+    "hint": "look after와 동의어"
+  },
+  {
+    "id": "w-id-04",
+    "word": "run out of",
+    "phonetic": "/rʌn aʊt əv/",
+    "meaning": "~이 다 떨어지다, 바닥나다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "My smartphone ran out of battery.",
+    "exampleKo": "내 스마트폰의 배터리가 다 닳았다.",
+    "hint": "남아있는 양이 0이 됨"
+  },
+  {
+    "id": "w-id-05",
+    "word": "figure out",
+    "phonetic": "/ˈfɪɡjər aʊt/",
+    "meaning": "알아내다, 이해하다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "I finally figured out the answer to the math problem.",
+    "exampleKo": "나는 마침내 그 수학 문제의 답을 알아냈다.",
+    "hint": "고민 끝에 해결책을 찾아냄"
+  },
+  {
+    "id": "w-id-06",
+    "word": "keep in mind",
+    "phonetic": "/kiːp ɪn maɪnd/",
+    "meaning": "명심하다, 기억해 두다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "Keep in mind that practice makes perfect.",
+    "exampleKo": "연습이 완벽을 만든다는 점을 명심해.",
+    "hint": "마음속에 새겨 둠"
+  },
+  {
+    "id": "w-id-07",
+    "word": "count on",
+    "phonetic": "/kaʊnt ɑːn/",
+    "meaning": "~을 믿다, 의지하다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "You can always count on me as a true friend.",
+    "exampleKo": "너는 진정한 친구로서 언제나 나를 믿어도 돼.",
+    "hint": "rely on과 같은 의미"
+  },
+  {
+    "id": "w-id-08",
+    "word": "put off",
+    "phonetic": "/pʊt ɔːf/",
+    "meaning": "미루다, 연기하다",
+    "partOfSpeech": "phrase",
+    "grade": "idiom",
+    "category": "필수 숙어",
+    "exampleEn": "Do not put off until tomorrow what you can do today.",
+    "exampleKo": "오늘 할 수 있는 일을 내일로 미루지 마라.",
+    "hint": "postpone과 동의어"
+  }
+];
+    let currentIndex = 0;
+    let autoIntervalMs = 2000;
+    let isPlaying = true;
+    let timer = null;
+
+    function renderWord() {
+      const item = WORDS[currentIndex];
+      if (!item) return;
+
+      document.getElementById('counter').innerText = '단어 ' + (currentIndex + 1) + ' / ' + WORDS.length;
+      document.getElementById('gradeBadge').innerText = item.grade === 'idiom' ? '중학 숙어' : '중' + item.grade;
+      document.getElementById('categoryBadge').innerText = item.category || '어휘';
+      document.getElementById('wordText').innerText = item.word;
+      document.getElementById('phoneticText').innerText = item.phonetic || '';
+      document.getElementById('meaningText').innerText = item.meaning;
+      document.getElementById('exampleEn').innerText = item.exampleEn || '';
+      document.getElementById('exampleKo').innerText = item.exampleKo || '';
+
+      speak(item.word);
+    }
+
+    function speak(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'en-US';
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
+      }
+    }
+
+    function resetTimer() {
+      if (timer) clearInterval(timer);
+      if (isPlaying) {
+        timer = setInterval(() => {
+          currentIndex = (currentIndex + 1) % WORDS.length;
+          renderWord();
+        }, autoIntervalMs);
+      }
+    }
+
+    function nextWord() {
+      currentIndex = (currentIndex + 1) % WORDS.length;
+      renderWord();
+      if (isPlaying) resetTimer();
+    }
+
+    function prevWord() {
+      currentIndex = (currentIndex - 1 + WORDS.length) % WORDS.length;
+      renderWord();
+      if (isPlaying) resetTimer();
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById('playBtn');
+      if (isPlaying) {
+        btn.innerText = '⏸ 일시정지';
+        btn.classList.remove('paused');
+        resetTimer();
+      } else {
+        btn.innerText = '▶ 자동재생';
+        btn.classList.add('paused');
+        if (timer) clearInterval(timer);
+      }
+    }
+
+    function setSpeed(ms) {
+      autoIntervalMs = ms;
+      document.getElementById('spd1').classList.toggle('active', ms === 1000);
+      document.getElementById('spd2').classList.toggle('active', ms === 2000);
+      document.getElementById('spd3').classList.toggle('active', ms === 3000);
+      if (isPlaying) resetTimer();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextWord();
+      else if (e.key === 'ArrowLeft') prevWord();
+      else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    });
+
+    renderWord();
+    resetTimer();
+  </script>
+</body>
+</html>
